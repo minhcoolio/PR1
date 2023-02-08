@@ -53,21 +53,48 @@ def find_long_lat(img):
     return np.dstack((long, lat)) #stack long on top of lat
 
 # converts spherical to cartesian coords
-# input is (m, n) long and lat matrix and depth(r)
+# input is (m, n) stacked long and lat matrix and depth(r)
 # returns a matrix with x y z stacked depth wise (m, n, 3)
-def sphr2cart(long, lat, r):
+def sphr2cart(long_lat, r):
+    long = long_lat[:,:,0]
+    lat = long_lat[:,:,1]
     x = r*np.multiply(np.sin(lat), np.cos(long))
     y = r*np.multiply(np.sin(lat), np.sin(long))
     z = r*np.cos(lat)
     temp = np.dstack((x,y))
     return np.dstack((temp, z))
 
+# converts cartesian to spherical coords
+# input is matrix of cart coords x y z stacked depth wise
+def cart2sphr(cart_mat):
+    r = LA.norm(cart_mat, axis=2)
+    long = np.arctan2(LA.norm(cart_mat[:,:,:2], axis=2)/cart_mat[:,:,2])
+    lat = np.arctan2(cart_mat[:,:,1]/cart_mat[:,:,0])
+    out = np.dstack((r, long))
+    return np.dstack((out, lat))
+
 # input: R is (3,3,N) collection of rot. matrices,
-#        cart_mat is a x mat, y mat, z mat stacked depth wise
+# cart_mat is a x mat, y mat, z mat stacked depth wise
 # this function rotates each (x,y,z) coordinate pair of each 
 # img by the respective rotation
-def rotate(R, cart_mat):
-    x = 1
+# returns the rotate cart_mat points for EACH image
+# so it would be a large stack of cart_mat for each image
+def rotate(R, cart_mat, num_img):
+    rot_stack = np.empty(cart_mat.shape)
+    vec_mat = cart_mat.reshape((cart_mat.shape[0]*cart_mat.shape[1]), cart_mat.shape[2]) #turns the 3d mat into a 2d one for rotation
+    vec_mat = vec_mat.transpose()
+    
+    N = np.min(R.shape[2], num_img) # iterate for which ever there is less of
+    for i in range(N):
+        temp = np.matmul(R[:,:,i],vec_mat)
+        temp = temp.reshape((3,cart_mat.shape[0],cart_mat.shape[1]))
+        rot_stack = np.dstack((rot_stack, temp))
+
+    # will need to cut off the first index of stack
+    return rot_stack[:,:,:,1:] 
+    # this stack basically contains the pos of each pixel of each img in the sphere
+    
+    
     
 
 dataset="1"
@@ -96,13 +123,14 @@ cam_ts = camd.get("ts")
 
 # Test to reshape a 3,3,N matrix into a (3*3), N matrix
 x = np.arange(25).reshape((5,5))
-y = np.arange(25).reshape((5,5))
+y = np.arange(1,26).reshape((5,5))
 z = np.arange(25).reshape((5,5))
 temp = np.dstack((x,y))
 out = np.dstack((temp,z))
 out1 = out.reshape((out.shape[0]*out.shape[1]), out.shape[2])
 out1 = out1.transpose() # turns it into 2d array so we can miltiply R by each point
 
-#out2 = out1.transpose()
 out2 = out1.reshape((3,5,5)) # this turns it back into original shape
+#rot_stack = np.empty()
+#rot_stack = np.dstack((rot_stack, x))
 
