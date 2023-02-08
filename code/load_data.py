@@ -54,7 +54,7 @@ def calibrate(raw): #pass in raw vector (not matrix)
         scale_factorW = Vref/1023/senW
         
         Vref = 3300 #in mV, 3.3V
-        senA = 3 # sensitivity mV/g
+        senA = 300 # sensitivity mV/g
         scale_factorA = Vref/1023/senA
         
         #noiseA = np.array([140.162, 126.888, 228.638])
@@ -84,6 +84,8 @@ def qt_exp(q):
         qv = np.array([q[1], q[2], q[3]]) #removing the scalar factor to get just qv
         sinQs = np.sin(LA.norm(qv))/LA.norm(qv) #error occuring here where qv is most likely 0        
         expq = ex*np.array([np.cos(LA.norm(qv)), q[1]*sinQs, q[2]*sinQs, q[3]*sinQs])
+        
+        expq += 1e-6 #adding perturbation to avoid singularities
         return expq
     
 def qt_inv(q):
@@ -138,9 +140,15 @@ def cost_fn(q_tj, imu_data, ts):
         mm_err = np.append(mm_err, temp2) #collection of all mm error terms
         
     for j in range(1,T):
+        temp3 = h(q_tj[:,j])
+        qv = temp3[1:]
+        temp4 = LA.norm(at[:3,j] - qv)**2
+        ob_err = np.append(ob_err, temp4)
+        '''
         temp3 = np.append(0, at[:3, j]) #need to append a zero to make it (4,)
         temp4 = LA.norm(temp3 - h(q_tj[:,j]))**2
         ob_err = np.append(ob_err, temp4)
+        '''
     
     out = .5*np.sum(mm_err) + .5*np.sum(ob_err) #perturbing slightly
     return out
@@ -212,20 +220,22 @@ axes[2].plot(range(N), mm_r, color='b',label='MM')
 plt.show()
 
 # Plot the accel in units of 1
-a_nxt = np.zeros([4,N]) # FIX This it is plotting biased versions, plot unbiased
-for i in range(N):
-    a_nxt[:, i] = h(q_nxt[:, i])
-a_x = a_nxt[0, :]
-a_y = a_nxt[1, :]
-a_z = a_nxt[2, :]
-fig, axis = plt.subplots(3)
-axis[0].set_title('Yaw in Radians')
+#lim = imu_vals.shape[1]
+lim = N
+a_nxt = np.zeros([4,lim])
+for z in range(lim):
+    a_nxt[:, z] = h(q_nxt[:, z])
+a_x = a_nxt[1, :]
+a_y = a_nxt[2, :]
+a_z = a_nxt[3, :]
+fig2, axis = plt.subplots(3)
+axis[0].set_title('Ax')
 axis[0].plot(range(N), imu_phys[0,:5561], color='r', label='VICON')
 axis[0].plot(range(N), a_x, color='b',label='MM')
-axis[1].set_title('Pitch in Radians')
+axis[1].set_title('Ay')
 axis[1].plot(range(N), imu_phys[1,:5561], color='r', label='VICON')
 axis[1].plot(range(N), a_y, color='b',label='MM')
-axis[2].set_title('Roll in Radians')
+axis[2].set_title('Az')
 axis[2].plot(range(N), imu_phys[2,:5561], color='r', label='VICON')
 axis[2].plot(range(N), a_z, color='b',label='MM')
 plt.show()
@@ -250,8 +260,14 @@ gradient1 = cost_grad(q_nxt, imu_phys, imu_ts)
 #testlog = log_grad(q0)
 #print(testlog)
 #print(qt_log(q0))
-
-
+T = imu_phys.shape[1]
+q_nxt = np.zeros([4, T])
+q_nxt[:, 0] = q0
+ang = np.zeros([3,T])
+for j in range(T-1):
+    tau = imu_ts[0,j+1]-imu_ts[0,j]
+    w = np.array([ imu_phys[4,j], imu_phys[5,j], imu_phys[3,j] ]) # order from imu is zxy but we need xyz
+    q_nxt[:, j+1] = motion_mod(q_nxt[:, j], w, tau) # quat trajectory
 
 # take q_nxt as t=0
 num_iter = 0 # track number of iterations
@@ -259,14 +275,12 @@ q_curr = q_nxt/LA.norm(q_nxt, axis=0)
 tol = .5
 bail_count = 0
 cost_grad = grad(cost_fn)
-while num_iter < 50:
+while num_iter < 5:
     
     start = time.time() #for testing
     gradi = cost_grad(q_curr, imu_phys, imu_ts)
     
-    #gradi[np.isnan(gradi)] = 0 # convert all nan elements in array to 0
-    
-    step = 10 # implement adaptive step size based on lipschitz
+    step = .5 # implement adaptive step size based on lipschitz
     q_nxt = q_curr - step*gradi      
     q_nxt /= LA.norm(q_nxt, axis=0) #norm each quaternion 
     num_iter = num_iter+1  
