@@ -34,7 +34,7 @@ def read_data(fname):
   return d
 
 # pass in 1 channel of the img(x_dim,y_dim,1)
-# return a matrix containing lat and long of each pixel
+# return a matrix containing lat and long of each pixel (x, y, 2)
 def find_long_lat(img):
     res_lat = 45/img.shape[0]
     res_long = 60/img.shape[1]
@@ -51,9 +51,23 @@ def find_long_lat(img):
            long[i, j] = (cx - img[i,j]) * res_long
            lat[i, j] = (img[i,j] - cy) * res_lat
     return np.dstack((long, lat)) #stack long on top of lat
-           
-def sphr2cart(long, lat, depth):
-    depth = 1
+
+# converts spherical to cartesian coords
+# input is (m, n) long and lat matrix and depth(r)
+# returns a matrix with x y z stacked depth wise (m, n, 3)
+def sphr2cart(long, lat, r):
+    x = r*np.multiply(np.sin(lat), np.cos(long))
+    y = r*np.multiply(np.sin(lat), np.sin(long))
+    z = r*np.cos(lat)
+    temp = np.dstack((x,y))
+    return np.dstack((temp, z))
+
+# input: R is (3,3,N) collection of rot. matrices,
+#        cart_mat is a x mat, y mat, z mat stacked depth wise
+# this function rotates each (x,y,z) coordinate pair of each 
+# img by the respective rotation
+def rotate(R, cart_mat):
+    x = 1
     
 
 dataset="1"
@@ -79,4 +93,16 @@ cam_ts = camd.get("ts")
 
 #print(cam_im.shape[0])
 #long_lat = np.zeros((cam_im.shape[0], cam_im.shape[1], 2))
+
+# Test to reshape a 3,3,N matrix into a (3*3), N matrix
+x = np.arange(25).reshape((5,5))
+y = np.arange(25).reshape((5,5))
+z = np.arange(25).reshape((5,5))
+temp = np.dstack((x,y))
+out = np.dstack((temp,z))
+out1 = out.reshape((out.shape[0]*out.shape[1]), out.shape[2])
+out1 = out1.transpose() # turns it into 2d array so we can miltiply R by each point
+
+#out2 = out1.transpose()
+out2 = out1.reshape((3,5,5)) # this turns it back into original shape
 
