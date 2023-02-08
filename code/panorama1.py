@@ -14,11 +14,6 @@ import transforms3d as t3d
 from autograd import grad, jacobian
 import autograd.numpy as np
 from autograd.numpy import linalg as LA
-'''
-import jax.numpy as np
-from jax import grad, jit
-from numpy import linalg as LA
-'''
 import matplotlib.pyplot as plt
 #import mpl_toolkits.mplot3d as a3
 #from rotplot import rotplot
@@ -40,17 +35,26 @@ def read_data(fname):
 
 # pass in 1 channel of the img(x_dim,y_dim,1)
 # return a matrix containing lat and long of each pixel
-def find_lat(img):
+def find_long_lat(img):
     res_lat = 45/img.shape[0]
     res_long = 60/img.shape[1]
-    
     cx = np.rint(img.shape[0]/2)
     cy = np.rint(img.shape[1]/2)
     
     long = (cx - img) * res_long
     lat = (img - cy) * res_lat
-def find_long():
-    print(1)
+    
+    long = np.zeros((img.shape[0], img.shape[1]))
+    lat = np.zeros((img.shape[0], img.shape[1]))
+    for i in range(img.shape[0]):
+       for j in range(img.shape[1]):
+           long[i, j] = (cx - img[i,j]) * res_long
+           lat[i, j] = (img[i,j] - cy) * res_lat
+    return np.dstack((long, lat)) #stack long on top of lat
+           
+def sphr2cart(long, lat, depth):
+    depth = 1
+    
 
 dataset="1"
 cfile = "../data/cam/cam" + dataset + ".p"
@@ -73,4 +77,6 @@ vic_ts = vicd.get("ts")
 cam_im = camd.get("cam")
 cam_ts = camd.get("ts")
 
-print(cam_im.shape[0])
+#print(cam_im.shape[0])
+#long_lat = np.zeros((cam_im.shape[0], cam_im.shape[1], 2))
+
