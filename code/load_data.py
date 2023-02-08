@@ -57,10 +57,13 @@ def calibrate(raw): #pass in raw vector (not matrix)
         senA = 3 # sensitivity mV/g
         scale_factorA = Vref/1023/senA
         
-        noiseA = np.array([140.162, 126.888, 228.638])
+        #noiseA = np.array([140.162, 126.888, 228.638])
+        noiseA = np.array([140.162, 126.888, 1/scale_factorA + 228.638])
         noiseW = np.array([-138.883333, -126.460666, -228.994])
  
-        value[0:3, i] = (raw[0:3, i] - biasA - noiseA) * scale_factorA + np.array([0,0,1])
+        #print(raw[0:3, i] - biasA)
+        #value[0:3, i] = (raw[0:3, i] - biasA - noiseA) * scale_factorA + np.array([0,0,1])
+        value[0:3, i] = (raw[0:3, i] - biasA - noiseA) * scale_factorA
         value[3:6, i] = (raw[3:6, i] - biasW - noiseW) * scale_factorW 
         
     return value
@@ -98,11 +101,13 @@ def qt_log(q):
     tol = .01 #check for if qv = 0
     if LA.norm(qv) < tol and LA.norm(qv) > -tol:
         qtlog = np.array([np.log(np.absolute(q[0])), 0, 0, 0])
+        
+    qtlog += 1e-6 #adding perturbation to avoid singularities
     return qtlog
 
 # observation model
 def h(q):
-    mid = np.array([0,0,0,1])
+    mid = np.array([0,0,0,-1])
     temp1 = qt_multiply(qt_inv(q), mid)
     out = qt_multiply(temp1, q)
     return out
@@ -137,7 +142,7 @@ def cost_fn(q_tj, imu_data, ts):
         temp4 = LA.norm(temp3 - h(q_tj[:,j]))**2
         ob_err = np.append(ob_err, temp4)
     
-    out = .5*np.sum(mm_err) + .5*np.sum(ob_err)
+    out = .5*np.sum(mm_err) + .5*np.sum(ob_err) #perturbing slightly
     return out
 
 
@@ -206,23 +211,23 @@ axes[2].plot(range(N), vic_r, color='r', label='VICON')
 axes[2].plot(range(N), mm_r, color='b',label='MM')
 plt.show()
 
-a_nxt = np.zeros([4,N])
+# Plot the accel in units of 1
+a_nxt = np.zeros([4,N]) # FIX This it is plotting biased versions, plot unbiased
 for i in range(N):
     a_nxt[:, i] = h(q_nxt[:, i])
-
 a_x = a_nxt[0, :]
 a_y = a_nxt[1, :]
 a_z = a_nxt[2, :]
-fig, axes = plt.subplots(3)
-axes[0].set_title('Yaw in Radians')
-axes[0].plot(range(N), imu_phys[0,:5561], color='r', label='VICON')
-axes[0].plot(range(N), a_x, color='b',label='MM')
-axes[1].set_title('Pitch in Radians')
-axes[1].plot(range(N), imu_phys[1,:5561], color='r', label='VICON')
-axes[1].plot(range(N), a_y, color='b',label='MM')
-axes[2].set_title('Roll in Radians')
-axes[2].plot(range(N), imu_phys[2,:5561], color='r', label='VICON')
-axes[2].plot(range(N), a_z, color='b',label='MM')
+fig, axis = plt.subplots(3)
+axis[0].set_title('Yaw in Radians')
+axis[0].plot(range(N), imu_phys[0,:5561], color='r', label='VICON')
+axis[0].plot(range(N), a_x, color='b',label='MM')
+axis[1].set_title('Pitch in Radians')
+axis[1].plot(range(N), imu_phys[1,:5561], color='r', label='VICON')
+axis[1].plot(range(N), a_y, color='b',label='MM')
+axis[2].set_title('Roll in Radians')
+axis[2].plot(range(N), imu_phys[2,:5561], color='r', label='VICON')
+axis[2].plot(range(N), a_z, color='b',label='MM')
 plt.show()
 
     
@@ -254,7 +259,7 @@ q_curr = q_nxt/LA.norm(q_nxt, axis=0)
 tol = .5
 bail_count = 0
 cost_grad = grad(cost_fn)
-while num_iter < 10:
+while num_iter < 50:
     
     start = time.time() #for testing
     gradi = cost_grad(q_curr, imu_phys, imu_ts)
