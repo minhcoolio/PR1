@@ -150,6 +150,8 @@ def cost_fn(q_tj, imu_data, ts):
         ob_err = np.append(ob_err, temp4)
         '''
     
+    print(np.sum(mm_err))
+    print(np.sum(ob_err))
     out = .5*np.sum(mm_err) + .5*np.sum(ob_err) #perturbing slightly
     return out
 
