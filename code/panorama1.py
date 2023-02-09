@@ -77,7 +77,7 @@ def cart2sphr(cart_mat):
 # returns the rotate cart_mat points for EACH image
 # so it would be a large stack of cart_mat for each image
 def rotate(R, cart_mat, num_img):
-    rot_stack = np.empty((cart_mat.shape[0],cart_mat.shape[1],3))
+    temp_lis = []
     vec_mat = cart_mat.reshape((cart_mat.shape[0]*cart_mat.shape[1]), cart_mat.shape[2]) #turns the 3d mat into a 2d one for rotation
     vec_mat = vec_mat.transpose()
     
@@ -87,10 +87,10 @@ def rotate(R, cart_mat, num_img):
         temp = temp.transpose()
         temp = temp.reshape((cart_mat.shape[0],cart_mat.shape[1],3)) ##LOOK OVER THIS
         #print(temp.shape) # prints (3, 240, 320)
-        rot_stack = np.dstack((rot_stack, temp))
-
-    # will need to cut off the first index of stack
-    return rot_stack[:,:,:,1:] 
+        temp_lis.append(temp)
+            
+    rot_stack = np.stack(temp_lis)
+    return rot_stack
     # this stack basically contains the pos of 
     # each img in the sphere in cartesian coords
     
@@ -122,6 +122,7 @@ cam_ts = camd.get("ts")
 #long_lat = np.zeros((cam_im.shape[0], cam_im.shape[1], 2))
 R = vic_mats
 
+
 test_img = cam_im[:,:,0,0]
 lola = find_long_lat(test_img) # obtaining lat and long in spher. coords
 img_cart = sphr2cart(lola, 1)
@@ -129,7 +130,10 @@ cart_stack = rotate(R, img_cart, cam_im.shape[3])
 
 rot_sphr = np.zeros(cart_stack.shape)
 for i in range(cart_stack.shape[3]):
-    rot_sphr[:,:,:,i] = cart2sphr(cart_stack[:,:,:,i])
+    #rot_sphr[:,:,:,i] = cart2sphr(cart_stack[:,:,:,i])
+    
+    if i%10 == 1:
+        print(i)
 
 
 
@@ -148,4 +152,15 @@ out1 = out1.transpose() # turns it into 2d array so we can miltiply R by each po
 #out2 = out1.reshape((3,5,5)) # this turns it back into original shape
 out1 = out1.transpose()
 out2 = out1.reshape((5,5,3)) # this turns it back into original shape
+
+#out3 = np.stack((out1,out2), axis=3)
+#out3 = np.stack((out3,out2), axis=3)
+out3 = []
+out3.append(out2)
+out3.append(out2)
+out3.append(out2)
+out3.append(out2)
+out4 = np.stack(out3)
+out4 = out4.reshape((5,5,4,3))
+
 '''
