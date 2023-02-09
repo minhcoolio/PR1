@@ -41,9 +41,6 @@ def find_long_lat(img):
     cx = np.rint(img.shape[0]/2)
     cy = np.rint(img.shape[1]/2)
     
-    long = (cx - img) * res_long
-    lat = (img - cy) * res_lat
-    
     long = np.zeros((img.shape[0], img.shape[1]))
     lat = np.zeros((img.shape[0], img.shape[1]))
     for i in range(img.shape[0]):
@@ -80,23 +77,24 @@ def cart2sphr(cart_mat):
 # returns the rotate cart_mat points for EACH image
 # so it would be a large stack of cart_mat for each image
 def rotate(R, cart_mat, num_img):
-    rot_stack = np.empty(cart_mat.shape)
+    rot_stack = np.empty((cart_mat.shape[0],cart_mat.shape[1],3))
     vec_mat = cart_mat.reshape((cart_mat.shape[0]*cart_mat.shape[1]), cart_mat.shape[2]) #turns the 3d mat into a 2d one for rotation
     vec_mat = vec_mat.transpose()
     
-    N = np.min(R.shape[2], num_img) # iterate for which ever there is less of
+    N = np.minimum(R.shape[2], num_img) # iterate for which ever there is less of
     for i in range(N):
         temp = np.matmul(R[:,:,i],vec_mat)
-        temp = temp.reshape((3,cart_mat.shape[0],cart_mat.shape[1]))
+        temp = temp.transpose()
+        temp = temp.reshape((cart_mat.shape[0],cart_mat.shape[1],3)) ##LOOK OVER THIS
+        #print(temp.shape) # prints (3, 240, 320)
         rot_stack = np.dstack((rot_stack, temp))
 
     # will need to cut off the first index of stack
     return rot_stack[:,:,:,1:] 
-    # this stack basically contains the pos of each pixel of each img in the sphere
+    # this stack basically contains the pos of 
+    # each img in the sphere in cartesian coords
     
     
-    
-
 dataset="1"
 cfile = "../data/cam/cam" + dataset + ".p"
 ifile = "../data/imu/imuRaw" + dataset + ".p"
@@ -109,8 +107,10 @@ vicd = read_data(vfile)
 toc(ts,"Data import")
 
 
-imu_vals = imud.get("vals")
-imu_ts = imud.get("ts")
+#imu_vals = imud.get("vals")
+#imu_ts = imud.get("ts")
+
+
 
 vic_mats = vicd.get("rots")
 vic_ts = vicd.get("ts")
@@ -120,7 +120,21 @@ cam_ts = camd.get("ts")
 
 #print(cam_im.shape[0])
 #long_lat = np.zeros((cam_im.shape[0], cam_im.shape[1], 2))
+R = vic_mats
 
+test_img = cam_im[:,:,0,0]
+lola = find_long_lat(test_img) # obtaining lat and long in spher. coords
+img_cart = sphr2cart(lola, 1)
+cart_stack = rotate(R, img_cart, cam_im.shape[3])
+
+rot_sphr = np.zeros(cart_stack.shape)
+for i in range(cart_stack.shape[3]):
+    rot_sphr[:,:,:,i] = cart2sphr(cart_stack[:,:,:,i])
+
+
+
+
+'''
 # Test to reshape a 3,3,N matrix into a (3*3), N matrix
 x = np.arange(25).reshape((5,5))
 y = np.arange(1,26).reshape((5,5))
@@ -130,7 +144,8 @@ out = np.dstack((temp,z))
 out1 = out.reshape((out.shape[0]*out.shape[1]), out.shape[2])
 out1 = out1.transpose() # turns it into 2d array so we can miltiply R by each point
 
-out2 = out1.reshape((3,5,5)) # this turns it back into original shape
-#rot_stack = np.empty()
-#rot_stack = np.dstack((rot_stack, x))
 
+#out2 = out1.reshape((3,5,5)) # this turns it back into original shape
+out1 = out1.transpose()
+out2 = out1.reshape((5,5,3)) # this turns it back into original shape
+'''
