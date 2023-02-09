@@ -65,8 +65,8 @@ def sphr2cart(long_lat, r):
 # input is matrix of cart coords x y z stacked depth wise
 def cart2sphr(cart_mat):
     r = LA.norm(cart_mat, axis=2)
-    long = np.arctan2(LA.norm(cart_mat[:,:,:2], axis=2)/cart_mat[:,:,2])
-    lat = np.arctan2(cart_mat[:,:,1]/cart_mat[:,:,0])
+    long = np.arctan(LA.norm(cart_mat[:,:,:2], axis=2)/cart_mat[:,:,2])
+    lat = np.arctan(cart_mat[:,:,1]/cart_mat[:,:,0])
     out = np.dstack((r, long))
     return np.dstack((out, lat))
 
@@ -93,7 +93,23 @@ def rotate(R, cart_mat, num_img):
     return rot_stack
     # this stack basically contains the pos of 
     # each img in the sphere in cartesian coords
+
+def cassini(spher):
+    long = spher[:,:,:,1]
+    lat = spher[:,:,:,2]
     
+    x = np.zeros((spher.shape[0], spher.shape[1], spher.shape[2]))
+    y = np.zeros((spher.shape[0], spher.shape[1], spher.shape[2]))
+    for i in range(spher.shape[0]):
+        x[i,:,:] = np.arcsin( np.cos(lat[i,:,:]) * np.sin(long[i,:,:]) )
+        y[i,:,:] = np.arctan2( np.sin(lat[i,:,:]), np.cos(lat[i,:,:])*np.cos(long[i,:,:]) )
+        
+    temp = []
+    temp.append(x)
+    temp.append(y)
+    out = np.stack(temp)
+    
+    return out
     
 dataset="1"
 cfile = "../data/cam/cam" + dataset + ".p"
@@ -109,8 +125,6 @@ toc(ts,"Data import")
 
 #imu_vals = imud.get("vals")
 #imu_ts = imud.get("ts")
-
-
 
 vic_mats = vicd.get("rots")
 vic_ts = vicd.get("ts")
@@ -128,13 +142,17 @@ lola = find_long_lat(test_img) # obtaining lat and long in spher. coords
 img_cart = sphr2cart(lola, 1)
 cart_stack = rotate(R, img_cart, cam_im.shape[3])
 
-rot_sphr = np.zeros(cart_stack.shape)
-for i in range(cart_stack.shape[3]):
-    #rot_sphr[:,:,:,i] = cart2sphr(cart_stack[:,:,:,i])
-    
-    if i%10 == 1:
-        print(i)
+sphr_stack = np.zeros(cart_stack.shape)
 
+# converts the cartesian coords to spherical
+for i in range(cart_stack.shape[0]):
+    sphr_stack[i,:,:,:] = cart2sphr(cart_stack[i,:,:,:])
+    
+# using Cassini projection
+temp = cassini(sphr_stack)
+print(temp.shape)
+        
+print("done")
 
 
 
