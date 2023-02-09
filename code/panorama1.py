@@ -147,12 +147,14 @@ sphr_stack = np.zeros(cart_stack.shape)
 # converts the cartesian coords to spherical
 for i in range(cart_stack.shape[0]):
     sphr_stack[i,:,:,:] = cart2sphr(cart_stack[i,:,:,:])
-    
+
+print("done1")    
+
 # using Cassini projection
 temp = cassini(sphr_stack)
 print(temp.shape)
         
-print("done")
+print("done2")
 
 
 
