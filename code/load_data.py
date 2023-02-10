@@ -288,7 +288,6 @@ while num_iter < 5:
     num_iter = num_iter+1  
     
     test = np.absolute((LA.norm(q_curr-q_nxt))) #early bail out method
-    print(test)
     if test < tol: 
         bail_count = bail_count + 1
         if bail_count == 10:
@@ -297,7 +296,7 @@ while num_iter < 5:
     
     stop = time.time()
     duration = stop-start
-    print(num_iter)
+    #print(num_iter)
     #print(duration)
 
 # Saving optimized trajectory to avoid rerunning just for the same matrix
