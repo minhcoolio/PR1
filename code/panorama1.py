@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Tue Feb  7 10:55:29 2023
-
-@author: mante
+@author: Minh Pham
 """
 
 import pickle
@@ -36,8 +34,8 @@ def read_data(fname):
 # pass in 1 channel of the img(x_dim,y_dim,1)
 # return a matrix containing lat and long of each pixel (x, y, 2)
 def find_long_lat(img):
-    res_lat = 45/img.shape[0]
-    res_long = 60/img.shape[1]
+    res_lat = 0.785398/img.shape[0] #45 deg to rad
+    res_long = 1.0472/img.shape[1] #60 deg to rad
     cx = np.rint(img.shape[0]/2)
     cy = np.rint(img.shape[1]/2)
     
@@ -148,14 +146,28 @@ sphr_stack = np.zeros(cart_stack.shape)
 for i in range(cart_stack.shape[0]):
     sphr_stack[i,:,:,:] = cart2sphr(cart_stack[i,:,:,:])
 
-print("done1")    
+#print("done1")    
 
 # using Cassini projection
 temp = cassini(sphr_stack)
-print(temp.shape)
-        
-print("done2")
+#rint(temp.shape)
 
+#temp = np.rint(temp) # now pixel positions
+
+x = np.rint(temp[0,:,:,:]*180/np.pi) #splitting the x and y up
+y = np.rint(temp[1,:,:,:]*180/np.pi)
+
+#test = temp[:, 200, :,:]*180/np.pi
+
+img = np.zeros((720,1800,3))
+for i in range(temp.shape[1]): #iterate through each image
+    for u in range(cam_im.shape[0]):
+        for v in range(cam_im.shape[1]):
+            x_loc = int(np.rint(x[i,u,v]))
+            y_loc = int(np.rint(y[i,u,v]))
+            img[u,v,:] = cam_im[x_loc,y_loc,:,i]
+
+plt.imshow(img)
 
 
 '''
