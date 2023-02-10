@@ -150,8 +150,8 @@ def cost_fn(q_tj, imu_data, ts):
         ob_err = np.append(ob_err, temp4)
         '''
     
-    print(np.sum(mm_err))
-    print(np.sum(ob_err))
+    #print(np.sum(mm_err))
+    #print(np.sum(ob_err))
     out = .5*np.sum(mm_err) + .5*np.sum(ob_err) #perturbing slightly
     return out
 
@@ -210,13 +210,14 @@ mm_r = ang[2, :]
 
 # Plot all angles in radians
 fig, axes = plt.subplots(3)
-axes[0].set_title('Yaw in Radians')
+fig.subplots_adjust(hspace=1.0)
+axes[0].set_title('Yaw in Radians', pad=-10)
 axes[0].plot(range(N), vic_y, color='r', label='VICON')
 axes[0].plot(range(N), mm_y, color='b',label='MM')
-axes[1].set_title('Pitch in Radians')
+axes[1].set_title('Pitch in Radians', pad=-10)
 axes[1].plot(range(N), vic_p, color='r', label='VICON')
 axes[1].plot(range(N), mm_p, color='b',label='MM')
-axes[2].set_title('Roll in Radians')
+axes[2].set_title('Roll in Radians', pad=-10)
 axes[2].plot(range(N), vic_r, color='r', label='VICON')
 axes[2].plot(range(N), mm_r, color='b',label='MM')
 plt.show()
@@ -230,16 +231,17 @@ for z in range(lim):
 a_x = a_nxt[1, :]
 a_y = a_nxt[2, :]
 a_z = a_nxt[3, :]
-fig2, axis = plt.subplots(3)
-axis[0].set_title('Ax')
-axis[0].plot(range(N), imu_phys[0,:5561], color='r', label='VICON')
-axis[0].plot(range(N), a_x, color='b',label='MM')
-axis[1].set_title('Ay')
-axis[1].plot(range(N), imu_phys[1,:5561], color='r', label='VICON')
-axis[1].plot(range(N), a_y, color='b',label='MM')
-axis[2].set_title('Az')
-axis[2].plot(range(N), imu_phys[2,:5561], color='r', label='VICON')
-axis[2].plot(range(N), a_z, color='b',label='MM')
+fig2, axes = plt.subplots(3)
+fig2.subplots_adjust(hspace=1.0)
+axes[0].set_title('Ax')
+axes[0].plot(range(N), imu_phys[0,:5561], color='r', label='VICON')
+axes[0].plot(range(N), a_x, color='b',label='MM')
+axes[1].set_title('Ay')
+axes[1].plot(range(N), imu_phys[1,:5561], color='r', label='VICON')
+axes[1].plot(range(N), a_y, color='b',label='MM')
+axes[2].set_title('Az')
+axes[2].plot(range(N), imu_phys[2,:5561], color='r', label='VICON')
+axes[2].plot(range(N), a_z, color='b',label='MM')
 plt.show()
 
     
@@ -313,6 +315,7 @@ opt_r = ang_opt[2, :]
 
 # Plot all angles in radians
 fig, axes = plt.subplots(3)
+fig.subplots_adjust(hspace=1.0)
 axes[0].set_title('Yaw in Radians')
 axes[0].plot(range(N), vic_y, color='r', label='VICON')
 axes[0].plot(range(N), opt_y, color='b',label='Optim')
@@ -323,49 +326,3 @@ axes[2].set_title('Roll in Radians')
 axes[2].plot(range(N), vic_r, color='r', label='VICON')
 axes[2].plot(range(N), opt_r, color='b',label='Optim')
 plt.show()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    
-
-
-#x = np.array([np.nan, np.nan, 0, 2])
-#print(np.isnan(x))
